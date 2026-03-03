@@ -208,6 +208,9 @@ if (!is.null(pal_use)) {
 }
 
 p_perm_scatter
+pdf(file.path(base_dir, "PCoAPermanova_SCFA_EuclideanDistanceVST_all.pdf"), width = 7, height = 6)
+print(p_perm_scatter)
+dev.off()
 
 
 
