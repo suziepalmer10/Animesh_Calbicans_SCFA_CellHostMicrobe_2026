@@ -109,6 +109,106 @@ dds$Group <- relevel(factor(dds$Group), ref = "N")
 
 dds <- DESeq(dds)  
 
+#################################################################################
+PERMANOVA
+#################################################################################
+
+# Your palette (unchanged)
+palette_12 <- c(
+  "black", "#FFA733", "#9D1B28", "#0152A1",
+  "#9C27B0", "#FF6F00", "#795548", "#1A237E",
+  "#C2185B", "#7CB342", "#00ACC1", "#424242"
+)
+library(vegan)
+library(ggplot2)
+library(ggrepel)   # optional, for nicer text placement
+
+# Transform (VST) and build sample x gene matrix
+vsd <- vst(dds, blind = FALSE)
+X <- t(assay(vsd))
+
+# Distance matrix (euclidean on VST)
+dist_mat <- dist(X, method = "euclidean")
+
+# metadata for samples (must match order of samples in dist_mat / vsd)
+meta <- as.data.frame(colData(vsd))
+meta$Group <- droplevels(meta$Group)
+
+# Run PERMANOVA
+set.seed(1)
+perm <- adonis2(dist_mat ~ Group, data = meta, permutations = 999, by = "margin")
+print(perm)
+
+library(ggplot2)
+library(vegan)
+
+# ---- PCoA scatterplot + group circles + PERMANOVA annotation ----
+# PCoA coordinates from the distance matrix
+pcoa <- cmdscale(dist_mat, k = 2, eig = TRUE)
+
+pcoa_df <- data.frame(
+  Sample = rownames(pcoa$points),
+  PCoA1  = pcoa$points[, 1],
+  PCoA2  = pcoa$points[, 2],
+  stringsAsFactors = FALSE
+)
+
+# Make sure metadata rownames match sample IDs
+meta2 <- meta
+if (is.null(rownames(meta2))) rownames(meta2) <- colnames(vsd)
+
+# Join metadata
+pcoa_df <- cbind(pcoa_df, meta2[pcoa_df$Sample, , drop = FALSE])
+
+# % variance explained (relative to sum of positive eigenvalues)
+eig <- pcoa$eig
+pos <- eig > 0
+var1 <- round(100 * eig[1] / sum(eig[pos]), 1)
+var2 <- round(100 * eig[2] / sum(eig[pos]), 1)
+
+# Pull PERMANOVA stats for Group
+perm_df <- as.data.frame(perm)
+perm_df$term <- rownames(perm_df)
+group_row <- perm_df[perm_df$term == "Group", , drop = FALSE]
+
+subtitle_txt <- paste0(
+  "PERMANOVA: F=", round(group_row$F[1], 3),
+  ", R²=", signif(group_row$R2[1], 3),
+  ", p=", format.pval(group_row$`Pr(>F)`[1], digits = 3)
+)
+
+# (Optional) reuse your palette_12 if it exists
+groups_present <- levels(droplevels(pcoa_df$Group))
+if (exists("palette_12")) {
+  pal_use <- setNames(palette_12[seq_along(groups_present)], groups_present)
+} else {
+  pal_use <- NULL
+}
+
+p_perm_scatter <- ggplot(pcoa_df, aes(PCoA1, PCoA2, color = Group)) +
+  geom_point(size = 4) +
+  # circles around groups (confidence ellipses)
+  stat_ellipse(aes(group = Group), type = "t", level = 0.95, linewidth = 1) +
+  labs(
+    title = "PCoA (Euclidean distance on VST)",
+    subtitle = subtitle_txt,
+    x = paste0("PCoA1: ", var1, "%"),
+    y = paste0("PCoA2: ", var2, "%")
+  ) +
+  theme_bw() +
+  theme(
+    text = element_text(size = 14),
+    legend.title = element_text(size = 12),
+    legend.text  = element_text(size = 10)
+  )
+
+# Apply palette if available
+if (!is.null(pal_use)) {
+  p_perm_scatter <- p_perm_scatter + scale_color_manual(values = pal_use, drop = TRUE)
+}
+
+p_perm_scatter
+
 
 
 ################################################################################
