@@ -1,1 +1,3 @@
-# Animesh_Calbicans_SCFA_RNA-Seq
+# Animesh_Calbicans_SCFA
+RNA-Seq Analysis
+ITS Analysis
