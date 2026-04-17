@@ -21,7 +21,7 @@ module load star
 
 
 # open path to sequences 
-cd /project/pediatrics/Koh_lab/shared/Suzette_MCFA-CA-colonization_RNAseqAdmera_Dec2025
+cd /project/pediatrics/Koh_lab/shared/Animesh_SCFA-CA-colonization_RNAseqAdmera_Dec2025
 
 #load in annotation and reference candida albicans SC5314 genome
 #UCSC Genome for Candida albicans SC5314
